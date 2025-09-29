@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polaris IR - Chat</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+        #main-container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            height: 90%;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #chat-container {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+        #chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ccc;
+        }
+        .message {
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .message .sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .user-message {
+            text-align: right;
+        }
+        .user-message .sender {
+            color: #007bff;
+        }
+        .bot-message .sender {
+            color: #28a745;
+        }
+        #input-container {
+            display: flex;
+            padding: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 1em;
+        }
+        #send-button {
+            border: none;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        #send-button:hover {
+            background-color: #0056b3;
+        }
+        #datasources-container {
+            width: 30%;
+            border-left: 1px solid #ccc;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #datasources-container h2 {
+            margin-top: 0;
+        }
+        #datasource-list {
+            list-style: none;
+            padding: 0;
+        }
+        .datasource-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .datasource-item .name {
+            font-weight: bold;
+        }
+        .datasource-item .type {
+            font-style: italic;
+            color: #666;
+        }
+        .datasource-item .url {
+            font-size: 0.9em;
+            color: #888;
+        }
+        #add-datasource-form {
+            margin-top: 20px;
+        }
+        #add-datasource-form input, #add-datasource-form select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        #add-datasource-button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #add-datasource-button:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div id="main-container">
+        <div id="chat-container">
+            <div id="chat-window"></div>
+            <div id="input-container">
+                <input type="text" id="message-input" placeholder="Type your message...">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
+        <div id="datasources-container">
+            <h2>Data Sources</h2>
+            <ul id="datasource-list"></ul>
+            <form id="add-datasource-form">
+                <h3>Add New Data Source</h3>
+                <input type="text" id="datasource-name" placeholder="Name" required>
+                <select id="datasource-type" required>
+                    <option value="csv">CSV</option>
+                    <option value="api">API</option>
+                    <option value="website">Website</option>
+                </select>
+                <input type="url" id="datasource-url" placeholder="URL" required>
+                <input type="url" id="codebook-url" placeholder="Codebook URL (optional)">
+                <button type="submit" id="add-datasource-button">Add Data Source</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatWindow = document.getElementById('chat-window');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const datasourceList = document.getElementById('datasource-list');
+        const addDatasourceForm = document.getElementById('add-datasource-form');
+        const datasourceNameInput = document.getElementById('datasource-name');
+        const datasourceTypeInput = document.getElementById('datasource-type');
+        const datasourceUrlInput = document.getElementById('datasource-url');
+        const codebookUrlInput = document.getElementById('codebook-url');
+
+        // Chat functionality
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message === '') return;
+
+            const selectedSources = Array.from(document.querySelectorAll('.datasource-checkbox:checked'))
+                .map(checkbox => checkbox.closest('.datasource-item').getAttribute('data-source-id'));
+
+            console.log("Selected sources:", selectedSources);
+
+            appendMessage('You', message, 'user-message');
+            messageInput.value = '';
+
+            fetch('/v1/llm/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: message, sources: selectedSources })
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage('Bot', data.response, 'bot-message');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                appendMessage('Bot', 'Sorry, something went wrong.', 'bot-message');
+            });
+        }
+
+        function appendMessage(sender, message, messageClass) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', messageClass);
+
+            const senderElement = document.createElement('div');
+            senderElement.classList.add('sender');
+            senderElement.textContent = sender;
+
+            const contentElement = document.createElement('div');
+            contentElement.textContent = message;
+
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);
+
+            chatWindow.appendChild(messageElement);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        // Data source functionality
+        function fetchAndDisplayDataSources() {
+            fetch('/api/datasources')
+                .then(response => response.json())
+                .then(data => {
+                    datasourceList.innerHTML = '';
+                    data.forEach(source => {
+                        const listItem = document.createElement('li');
+                        listItem.classList.add('datasource-item');
+                        listItem.setAttribute('data-source-id', source.name); // Use name as ID for now
+
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.classList.add('datasource-checkbox');
+                        listItem.appendChild(checkbox);
+                        
+                        const nameElement = document.createElement('div');
+                        nameElement.classList.add('name');
+                        nameElement.textContent = source.name;
+
+                        const typeElement = document.createElement('div');
+                        typeElement.classList.add('type');
+                        typeElement.textContent = source.type;
+
+                        const urlElement = document.createElement('div');
+                        urlElement.classList.add('url');
+                        urlElement.textContent = source.url;
+
+                        listItem.appendChild(nameElement);
+                        listItem.appendChild(typeElement);
+                        listItem.appendChild(urlElement);
+
+                        if (source.codebook_url) {
+                            const codebookUrlElement = document.createElement('div');
+                            codebookUrlElement.classList.add('url');
+                            codebookUrlElement.textContent = `Codebook: ${source.codebook_url}`;
+                            listItem.appendChild(codebookUrlElement);
+                        }
+
+                        datasourceList.appendChild(listItem);
+                    });
+                });
+        }
+
+        addDatasourceForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = datasourceNameInput.value.trim();
+            const type = datasourceTypeInput.value;
+            const url = datasourceUrlInput.value.trim();
+            const codebook_url = codebookUrlInput.value.trim();
+
+            if (name === '' || url === '') return;
+
+            fetch('/api/datasources', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name, type, url, codebook_url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                fetchAndDisplayDataSources();
+                datasourceNameInput.value = '';
+                datasourceUrlInput.value = '';
+                codebookUrlInput.value = '';
+            });
+        });
+
+        // Initial load
+        fetchAndDisplayDataSources();
+    </script>
+</body>
+</html>

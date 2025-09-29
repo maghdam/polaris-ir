@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info:
+  title: POLARIS-IR API
+  version: "0.1.0"
+servers:
+  - url: http://localhost:8000
+paths:
+  /fetch-events:
+    get:
+      operationId: fetchEvents
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+        - in: query
+          name: countries
+          schema:
+            type: string
+        - in: query
+          name: since
+          schema:
+            type: string
+        - in: query
+          name: until
+          schema:
+            type: string
+        - in: query
+          name: max
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /generate-brief:
+    post:
+      operationId: generateBrief
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Brief response
+          content:
+            application/json:
+              schema:
+                type: object
+  /generate-scenario:
+    post:
+      operationId: generateScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Scenario response
+          content:
+            application/json:
+              schema:
+                type: object

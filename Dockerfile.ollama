@@ -1,0 +1,10 @@
+FROM ollama/ollama
+
+# Install curl for the healthcheck
+RUN apk add --no-cache curl
+
+COPY ollama-entrypoint.sh /ollama-entrypoint.sh
+
+RUN chmod +x /ollama-entrypoint.sh
+
+ENTRYPOINT ["/ollama-entrypoint.sh"]

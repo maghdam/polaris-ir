@@ -1,0 +1,54 @@
+services:
+  # The POLARIS-IR FastAPI application
+  polaris-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["./api-entrypoint.sh"]
+    ports:
+      - "8001:8000"
+    environment:
+      # This tells the ollama python client to connect to the ollama service
+      # instead of the default localhost.
+      - OLLAMA_HOST=http://ollama:11434
+      - PYTHONPATH=/app/src
+    depends_on: # Wait for the ollama service to be healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - polaris-net
+
+  # The Ollama service
+  ollama:
+    image: ollama/ollama
+    # This command starts the server, pulls the model in the background,
+    # and then waits for the server process to exit.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        ollama serve &
+        ollama_pid=$! &&
+        echo "Waiting for Ollama server to start..." &&
+        until ollama list > /dev/null 2>&1; do sleep 1; done &&
+        echo "Ollama server started. Pulling llama3 model..." &&
+        ollama pull llama3 &&
+        wait $ollama_pid
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list | grep -q 'llama3'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15m # Give it 15 minutes to download the model before failing
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11435:11434"
+    networks:
+      - polaris-net
+
+networks:
+  polaris-net:
+    driver: bridge
+
+volumes:
+  ollama-data:
