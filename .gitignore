@@ -1,4 +1,3 @@
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -82,11 +81,12 @@ cython_debug/
 .DS_Store
 Thumbs.db
 
-# Developer notes
-NOTES.md
 
 # Polaris specific
 .venv
 .vscode
 __pycache__
 src/polaris/data
+
+# Developer notes
+NOTES.md
