@@ -1,5 +1,7 @@
 # POLARIS-IR
 
+POLARIS-IR is like Google NotebookLM for structured data — a multi-agent AI backend that analyzes datasets instead of just summarizing text. Where NotebookLM helps researchers make sense of documents, POLARIS-IR helps analysts and policymakers extract insights from CSVs, codebooks, and quantitative sources.
+
 This repository contains the backend for the **POLARIS-IR** (Policy & Open-source LLM Analytics for Relations & International Security) assistant. The goal of this project is to create an AI-powered platform that can analyze data from various sources to answer questions about international security.
 
 ## Features
